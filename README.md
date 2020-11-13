@@ -1,1 +1,1 @@
-# NIR_thinning
+# NIR Thinning
