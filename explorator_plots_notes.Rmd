@@ -1,8 +1,29 @@
-# NIR: plotting data
-# author: Jimmy Larson
-# created: 12.7.2020
-# last edited: 12.7.2020
+---
+title: "Carbohydrate Quantification"
+author: "Jimmy Larson"
+date: "12/12/2020"
+output: html_document
+---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This file describes the process for making and present exploratory data analysis plots. Fruit from 'Gala' and 'Red Delicious' apples were collected throughout the 2020 growing season, fruit were separated between "king" and "lateral" fruit. 20 Fruit were collected for each cultivar and position population on the following dates:
+
+* April 28
+* May 6
+* June 2
+* July 13
+* August 4
+
+Upon collection, holes were poked into the fruit with a pick and placed into a -20 freezer. Fruit were then freeze dryed and ground. After grinding the sample was run through a Near infrared spectrophotometer. Fruit from the first three sampling dates were pooled together to have enough tissue for the NIR. Sugars - fructose, glucose, sorbitol, and sucorse - were extracted from the sample, starch was then extracted from the resulting pellet. Sugars and strach quantified separately using high performance liquid chromatography. Due to pooling of the first 3 dates for NIR, HPLC samples were replicated three times on those dates. The latter dates had each fruit quantified.
+
+## Cleaning data
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 ## load packages
 library(tidyverse)
 library(RColorBrewer)
@@ -14,7 +35,14 @@ library(streamgraph)
 theme_jl <- theme_ipsum_ps(grid="XY", axis="xy", axis_text_size = 10, axis_title_size = 11, axis_col = "black")
 ## load data----
 carbs <- read_csv("data/HPLC_carbohydrates.csv")
-## separate sample ID and date----
+
+labels <- c("Gala", "Red Delicious")
+names(labels) <- c("Gala", "RedDelicious")
+```
+
+Cultivar and position were first separated into their own columns...
+
+```{r, warning=FALSE, message=FALSE}
 carbs %>%
   separate(ID, c("cultivar", "position"), " ") %>%
   mutate(date1 = case_when(date == 8042020 ~ mdy("08/04/2020"),
@@ -22,39 +50,24 @@ carbs %>%
                            date == 6022020 ~ mdy("06-02-2020"),
                            date == 5062020 ~ mdy("05-06-2020"),
                            date == 4282020 ~ mdy("04-28-2020"))) -> carbs
-## calculate percent carbohydrates----
+```
+
+Percent of each carbohydrate was calculated from total carbohydrate of the sample...
+
+```{r, warning=FALSE, message=FALSE}
 carbs %>%
   mutate(perSucrose = (sucrose/carb)*100,
          perGlucose = (glucose/carb)*100,
          perFructose = (fructose/carb)*100,
          perSorbitol = (sorbitol/carb)*100,
          perStarch = (starch/carb)*100) -> carbs
-## facet labels----
-labels <- c("Gala", "Red Delicious")
-names(labels) <- c("Gala", "RedDelicious")
-## line plot -----
-### % carbohydrates
-carbs %>%
-  gather('perSucrose', 'perGlucose', 'perFructose', 'perSorbitol', 'perStarch',
-          key = "carbohydrate", value = "quantity") %>%
-  select(cultivar, position, date1, carbohydrate, quantity) %>%
-  group_by(cultivar, position, date1, carbohydrate) %>%
-  summarise(avgCarbohydrate = mean(quantity),
-            stdCarbohydrate = sd(quantity)) -> carbsLong
-ggplot(carbsLong, aes(x = date1, y = avgCarbohydrate, color = carbohydrate)) +
-  geom_point()+
-  geom_line(aes(linetype = position)) +
-  facet_wrap(~cultivar,
-             labeller = labeller(cultivar = labels)) +
-  scale_color_brewer(palette = "Dark2", labels = c("Fructose", "Glucose", "Sorbitol", "Starch", "Sucrose")) +
-  scale_linetype_discrete(labels = c("King", "Lateral")) +
-  labs(y = "% Carbohydrate",
-       x = "Date",
-       color = "Carbohydrate",
-       linetype = "Fruitlet Position")+
-  theme_jl
-#ggsave("per_carbs.png", width = 6, height = 4)
-### number carbohydrates
+```
+
+## Exploratory Plots
+
+### Total Carbohydrates over Time
+
+```{r, warning=FALSE, echo=FALSE}
 carbs %>%
   gather('sucrose', 'glucose', 'fructose', 'sorbitol', 'starch',
          key = "carbohydrate", value = "quantity") %>%
@@ -74,24 +87,39 @@ carbs %>%
        color = "Carbohydrate",
        linetype = "Fruitlet Position")+
   theme_jl
-#ggsave("total_carbs.png", width = 6, height = 4)
-## stacked barplot----
-ggplot(carbsLong, aes(x = as.factor(date1), y = avgCarbohydrate, fill = carbohydrate))+
-  geom_bar(position="fill", stat="identity")+
-  facet_grid(cultivar ~ position) +
-  scale_fill_brewer(palette = "Dark2", labels = c("Fructose", "Glucose", "Sorbitol", "Starch", "Sucrose")) +
+```
+
+### Percent Carbohydrates over Time
+
+```{r, warning=FALSE, echo=FALSE}
+carbs %>%
+  gather('perSucrose', 'perGlucose', 'perFructose', 'perSorbitol', 'perStarch',
+          key = "carbohydrate", value = "quantity") %>%
+  select(cultivar, position, date1, carbohydrate, quantity) %>%
+  group_by(cultivar, position, date1, carbohydrate) %>%
+  summarise(avgCarbohydrate = mean(quantity),
+            stdCarbohydrate = sd(quantity)) -> carbsLong
+ggplot(carbsLong, aes(x = date1, y = avgCarbohydrate, color = carbohydrate)) +
+  geom_point()+
+  geom_line(aes(linetype = position)) +
+  facet_wrap(~cultivar,
+             labeller = labeller(cultivar = labels)) +
+  scale_color_brewer(palette = "Dark2", labels = c("Fructose", "Glucose", "Sorbitol", "Starch", "Sucrose")) +
+  scale_linetype_discrete(labels = c("King", "Lateral")) +
   labs(y = "% Carbohydrate",
        x = "Date",
-       fill = "Carbohydrate")+
+       color = "Carbohydrate",
+       linetype = "Fruitlet Position")+
   theme_jl
-## stream graph----
-### gala king % carb
-carbsLong %>%
-  filter(cultivar == "Gala" & position == "King") -> stream_per_carbs
-streamgraph(stream_per_carbs, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
-  sg_fill_brewer("Dark2") %>%
-  sg_legend(TRUE, "Carbohydrate:")
-### gala king total carbs
+```
+
+### Streamgrahps
+
+#### Gala King Fruit Carbohydrates over time
+
+##### Total Carbohydrates
+
+```{r, warning=FALSE, echo=FALSE}
 carbs %>%
   gather('sucrose', 'glucose', 'fructose', 'sorbitol', 'starch',
          key = "carbohydrate", value = "quantity") %>%
@@ -100,16 +128,26 @@ carbs %>%
   summarise(avgCarbohydrate = mean(quantity),
             stdCarbohydrate = sd(quantity)) %>%
   filter(cultivar == "Gala" & position == "King") -> stream_carbs
-galaKing_stream <- streamgraph(stream_carbs, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
+streamgraph(stream_carbs, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
   sg_fill_brewer("Dark2") %>%
   sg_legend(TRUE, "Carbohydrate:")
-### gala lateral % carbs
+```
+
+##### Percent Carbohydrates
+
+```{r, warning=FALSE, echo=FALSE}
 carbsLong %>%
-  filter(cultivar == "Gala" & position == "lateral") -> stream_per_carbs_lat
-streamgraph(stream_per_carbs_lat, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
+  filter(cultivar == "Gala" & position == "King") -> stream_per_carbs
+streamgraph(stream_per_carbs, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
   sg_fill_brewer("Dark2") %>%
   sg_legend(TRUE, "Carbohydrate:")
-### gala lateral total carbs
+```
+
+#### Gala Lateral Fruit Carbohydrates over time
+
+##### Total Carbohydrates
+
+```{r, warning=FALSE, echo=FALSE}
 carbs %>%
   gather('sucrose', 'glucose', 'fructose', 'sorbitol', 'starch',
          key = "carbohydrate", value = "quantity") %>%
@@ -118,11 +156,26 @@ carbs %>%
   summarise(avgCarbohydrate = mean(quantity),
             stdCarbohydrate = sd(quantity)) %>%
   filter(cultivar == "Gala" & position == "lateral") -> stream_carbs_lat
-galaKing_stream <- streamgraph(stream_carbs_lat, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
+streamgraph(stream_carbs_lat, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
   sg_fill_brewer("Dark2") %>%
   sg_legend(TRUE, "Carbohydrate:")
+```
 
-## thinning dates----
+##### Percent Carbohydrates
+
+```{r, warning=FALSE, echo=FALSE}
+carbsLong %>%
+  filter(cultivar == "Gala" & position == "lateral") -> stream_per_carbs_lat
+streamgraph(stream_per_carbs_lat, key = "carbohydrate", value = "avgCarbohydrate", date = "date1") %>%
+  sg_fill_brewer("Dark2") %>%
+  sg_legend(TRUE, "Carbohydrate:")
+```
+
+### Carbohydrates During Apple Thinning
+
+Of particular note for this project was to look at how carbohydrates were affected in the spring by chemical thinning. A chemical thinner was applied on April 29, fruit were collected the day before thinner application - April 28 - and one week after the thinner - May 6. King fruit were thought to be less likely to abscise following thinner application than lateral. Individual carbohydrates were compared between positions before and after thinner application, separated by cultivar are presented below...
+
+```{r, warning=FALSE, echo=FALSE, fig.width= 10, fig.height=10}
 carbs %>%
   gather('sucrose', 'glucose', 'fructose', 'sorbitol', 'starch',
          key = "carbohydrate", value = "quantity") %>%
@@ -142,4 +195,4 @@ carbs %>%
        x = "Carbohydrate",
        fill = "Fruitlet Position")+
   theme_jl
-         
+```
