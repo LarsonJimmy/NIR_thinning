@@ -123,6 +123,7 @@ galaKing_stream <- streamgraph(stream_carbs_lat, key = "carbohydrate", value = "
   sg_legend(TRUE, "Carbohydrate:")
 
 ## thinning dates----
+### individual carbs
 carbs %>%
   gather('sucrose', 'glucose', 'fructose', 'sorbitol', 'starch',
          key = "carbohydrate", value = "quantity") %>%
@@ -142,4 +143,21 @@ carbs %>%
        x = "Carbohydrate",
        fill = "Fruitlet Position")+
   theme_jl
-         
+#ggsave("abscission_carbs.png", width = 10, height = 6)
+### total carbs
+carbs %>%
+  mutate(total_carb = sucrose + glucose + fructose + sorbitol + starch) %>%
+  select(cultivar, position, date1, total_carb) %>% 
+  group_by(cultivar, position, date1, total_carb) %>%
+  summarise(avgCarbohydrate = mean(total_carb))%>%
+  filter(date1 <= mdy("05-06-2020") & date1 >= mdy("04-28-2020")) %>%
+  ggplot(aes(x = position, y = avgCarbohydrate, fill = position))+
+  geom_bar(position="dodge", stat="identity", color = "black")+
+  facet_grid(cultivar ~ date1,
+             labeller = labeller(cultivar = labels)) +
+  scale_fill_brewer(palette = "Set2", labels = c("King", "Lateral")) +
+  labs(y = "Carbohydrate (mg/g dry weight)",
+       x = "Carbohydrate",
+       fill = "Fruitlet Position")+
+  theme_jl
+#ggsave("total_carbs.png", width = 10, height = 10)
