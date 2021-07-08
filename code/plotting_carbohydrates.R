@@ -1,7 +1,7 @@
 # NIR: plotting data
 # author: Jimmy Larson
 # created: 12.7.2020
-# last edited: 12.7.2020
+# last edited: 7.8.2021
 
 ## load packages
 library(tidyverse)
@@ -30,7 +30,7 @@ carbs %>%
          perSorbitol = (sorbitol/carb)*100,
          perStarch = (starch/carb)*100) -> carbs
 ## facet labels----
-labels <- c("Gala", "Red Delicious")
+labels <- c("'Gala'", "'Red Delicious'")
 names(labels) <- c("Gala", "RedDelicious")
 ## line plot -----
 ### % carbohydrates
@@ -38,12 +38,14 @@ carbs %>%
   gather('perSucrose', 'perGlucose', 'perFructose', 'perSorbitol', 'perStarch',
           key = "carbohydrate", value = "quantity") %>%
   select(cultivar, position, date1, carbohydrate, quantity) %>%
-  group_by(cultivar, position, date1, carbohydrate) %>%
+  group_by(cultivar, date1, carbohydrate) %>%
   summarise(avgCarbohydrate = mean(quantity),
             stdCarbohydrate = sd(quantity)) -> carbsLong
 ggplot(carbsLong, aes(x = date1, y = avgCarbohydrate, color = carbohydrate)) +
   geom_point()+
-  geom_line(aes(linetype = position)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = avgCarbohydrate - stdCarbohydrate, ymax = avgCarbohydrate + stdCarbohydrate),
+                width = 5)+
   facet_wrap(~cultivar,
              labeller = labeller(cultivar = labels)) +
   scale_color_brewer(palette = "Dark2", labels = c("Fructose", "Glucose", "Sorbitol", "Starch", "Sucrose")) +
@@ -53,7 +55,7 @@ ggplot(carbsLong, aes(x = date1, y = avgCarbohydrate, color = carbohydrate)) +
        color = "Carbohydrate",
        linetype = "Fruitlet Position")+
   theme_jl
-#ggsave("per_carbs.png", width = 6, height = 4)
+ggsave("per_carbs.png", width = 6, height = 4)
 ### number carbohydrates
 carbs %>%
   gather('sucrose', 'glucose', 'fructose', 'sorbitol', 'starch',
